@@ -20,7 +20,7 @@ func InitializeShards() ([]types.Shard, error) {
 	shards := []types.Shard{}
 
 	for _, configshard := range config.ConfigShards {
-		pool, err := pgxpool.New(context.Background(), configshard.ConnString)
+		pool, err := pgxpool.New(context.Background(), configshard.Dns)
 		if err != nil {
 			return nil, err
 		}
@@ -62,8 +62,9 @@ func ViewConfig() error {
 	}
 
 	fmt.Println("Number of Shards in Config: ", len(cfg.ConfigShards))
+	fmt.Println("Vnodes for shard: ", cfg.Vnodes)
 	for i, shard := range cfg.ConfigShards {
-		fmt.Printf("Number: %d / Name: %s / ConnString: %s", i+1, shard.Name, shard.ConnString)
+		fmt.Printf("Number: %d / Name: %s / Dns: %s", i+1, shard.Name, shard.Dns)
 	}
 	return nil
 }
@@ -87,13 +88,26 @@ func ClearConfig() error {
 }
 
 func AddToConfig(s *types.ConfigShard) error {
-	shards, err := LoadConfig()
+	config, err := LoadConfig()
 	if err != nil {
 		return err
 	}
 
-	shards.ConfigShards = append(shards.ConfigShards, *s)
-	if err = SaveConfig(shards); err != nil {
+	config.ConfigShards = append(config.ConfigShards, *s)
+	if err = SaveConfig(config); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ModifyConfigVnodes(Vnodes int) error {
+	config, err := LoadConfig()
+	if err != nil {
+		return err
+	}
+	config.Vnodes = Vnodes
+	if err = SaveConfig(config); err != nil {
 		return err
 	}
 

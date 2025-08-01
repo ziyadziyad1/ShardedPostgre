@@ -12,12 +12,13 @@ type Shard struct {
 }
 
 type ConfigShard struct {
-	Name       string `json:"name"`
-	ConnString string `json:"connString"`
+	Name string `json:"name"`
+	Dns  string `json:"Dns"`
 }
 
 type Config struct {
 	ConfigShards []ConfigShard
+	Vnodes       int
 }
 
 type Query struct {
