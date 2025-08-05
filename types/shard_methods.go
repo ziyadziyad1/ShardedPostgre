@@ -9,7 +9,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// Sends a query to a specific shard (TYPE = SELECT)
+// Query sends a SELECT query to a specific shard.
+// It validates the query arguments before executing.
 func (s *Shard) Query(q *Query) (pgx.Rows, error) {
 	if err := validation.ValidateArgs(q.Sql, q.Args); err != nil {
 		return nil, err
@@ -17,7 +18,8 @@ func (s *Shard) Query(q *Query) (pgx.Rows, error) {
 	return s.Pool.Query(q.Ctx, q.Sql, q.Args...)
 }
 
-// Sends a query to a specific shard (TYPE != SELECT)
+// Exec sends a non-SELECT query (e.g., INSERT, UPDATE, DELETE) to a specific shard.
+// It validates the query arguments before executing.
 func (s *Shard) Exec(q *Query) (pgconn.CommandTag, error) {
 	if err := validation.ValidateArgs(q.Sql, q.Args); err != nil {
 		return pgconn.CommandTag{}, err
@@ -25,6 +27,8 @@ func (s *Shard) Exec(q *Query) (pgconn.CommandTag, error) {
 	return s.Pool.Exec(q.Ctx, q.Sql, q.Args...)
 }
 
+// QueryRow sends a query expected to return a single row to a specific shard.
+// It validates the query arguments before executing.
 func (s *Shard) QueryRow(q *Query) (pgx.Row, error) {
 	if err := validation.ValidateArgs(q.Sql, q.Args); err != nil {
 		return nil, err
@@ -32,6 +36,8 @@ func (s *Shard) QueryRow(q *Query) (pgx.Row, error) {
 	return s.Pool.QueryRow(q.Ctx, q.Sql, q.Args...), nil
 }
 
+// HealthCheck checks if the shard's connection pool is reachable by pinging it.
+// Returns true if the ping succeeds, false otherwise.
 func (s *Shard) HealthCheck() bool {
 	if err := s.Pool.Ping(context.Background()); err != nil {
 		return false
@@ -39,6 +45,8 @@ func (s *Shard) HealthCheck() bool {
 	return true
 }
 
+// RetryHealthCheck attempts to ping the shard multiple times with a delay between attempts.
+// Returns true if any ping succeeds within the retries, false otherwise.
 func (s *Shard) RetryHealthCheck(retries int, delay time.Duration) bool {
 	for i := 0; i < retries; i++ {
 		if s.Pool.Ping(context.Background()) == nil {

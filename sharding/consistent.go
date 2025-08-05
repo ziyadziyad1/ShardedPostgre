@@ -152,7 +152,6 @@ func (h *HashRing) Clone() *HashRing {
 // RingManager manages a HashRing instance with concurrency control and configuration path.
 // It provides methods to add and remove shards safely, updating both the ring and config file.
 // It also maintains an atomic pointer to the current active ring.
-
 type RingManager struct {
 	mu         sync.Mutex
 	Ring       *HashRing
@@ -160,6 +159,8 @@ type RingManager struct {
 	Rring      atomic.Pointer[HashRing]
 }
 
+// InitRingManager initializes a RingManager with a given config path.
+// It loads the initial hash ring and stores it atomically.
 func InitRingManager(configpath string) (*RingManager, error) {
 	hashRing, err := InitHashRing(configpath)
 	if err != nil {
@@ -258,6 +259,7 @@ func (rm *RingManager) RemoveShard(name string) error {
 	return fmt.Errorf("Name isn't in shards list")
 }
 
+// Query executes a query that returns multiple rows on the appropriate shard based on the key.
 func (rm *RingManager) Query(q types.Query) (pgx.Rows, error) {
 	ring := rm.Rring.Load()
 	if ring == nil {
@@ -278,6 +280,7 @@ func (rm *RingManager) Query(q types.Query) (pgx.Rows, error) {
 	return nil, fmt.Errorf("Error in sharding config/state, shardname %s not found", shardName)
 }
 
+// Exec executes a query that does not return rows on the appropriate shard based on the key.
 func (rm *RingManager) Exec(q types.Query) (pgconn.CommandTag, error) {
 	ring := rm.Rring.Load()
 	if ring == nil {
@@ -298,6 +301,7 @@ func (rm *RingManager) Exec(q types.Query) (pgconn.CommandTag, error) {
 	return pgconn.CommandTag{}, fmt.Errorf("Error in sharding config/state, shardname %s not found", shardName)
 }
 
+// QueryRow executes a query that returns a single row on the appropriate shard based on the key.
 func (rm *RingManager) QueryRow(q types.Query) (pgx.Row, error) {
 	ring := rm.Rring.Load()
 	if ring == nil {
