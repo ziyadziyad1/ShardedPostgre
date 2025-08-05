@@ -1,0 +1,11 @@
+# Ignora i file di configurazione sensibili e locali
+config.json
+docker-compose.yaml
+main.go
+
+# Altri esempi utili
+.env
+*.log
+*.local
+.idea/
+.vscode/

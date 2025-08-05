@@ -1,0 +1,68 @@
+services:
+  pg1:
+    image: postgres
+    container_name: pg1
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: testdb1
+    command:
+    - postgres
+    - -c
+    - log_destination=stderr
+    - -c
+    - logging_collector=off
+    - -c
+    - log_statement=all
+    volumes:
+      - pgdata1:/var/lib/postgresql/data
+
+  pg2:
+    image: postgres
+    container_name: pg2
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: testdb2
+    command:
+    - postgres
+    - -c
+    - log_destination=stderr
+    - -c
+    - logging_collector=off
+    - -c
+    - log_statement=all
+    volumes:
+      - pgdata2:/var/lib/postgresql/data
+
+  pg3:
+    image: postgres
+    container_name: pg3
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: testdb3
+    command:
+    - postgres
+    - -c
+    - log_destination=stderr
+    - -c
+    - logging_collector=off
+    - -c
+    - log_statement=all
+    volumes:
+      - pgdata3:/var/lib/postgresql/data
+
+volumes:
+  pgdata1:
+    external: true
+  pgdata2:
+    external: true
+  pgdata3:
+    external: true
