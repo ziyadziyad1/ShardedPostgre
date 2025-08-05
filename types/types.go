@@ -25,4 +25,5 @@ type Query struct {
 	Ctx  context.Context
 	Sql  string
 	Args []any
+	Key  string
 }
