@@ -15,9 +15,17 @@ import (
 	"github.com/spaolacci/murmur3"
 )
 
-// HashRing represents a consistent hashing ring with virtual nodes (vnodes) for sharding.
-// It maintains a sorted list of hashes and a mapping from hash to shard name.
-// It supports concurrent access with a read-write mutex.
+// HashRing implements a consistent hashing ring with virtual nodes (vnodes) for distributing keys across shards.
+// It maintains a sorted list of vnode hashes and a mapping from each hash to its shard name.
+// This structure supports concurrent access with a read-write mutex.
+//
+// Note: This type is used internally. Users should interact with the RingManager for shard management.
+//
+// Fields:
+// - SortedHashes: Sorted slice of vnode hashes.
+// - HashToShard: Map from vnode hash to shard name.
+// - Shards: Slice of shards in the ring.
+// - Vnodes: Number of virtual nodes per shard.
 type HashRing struct {
 	mu           sync.RWMutex
 	SortedHashes []uint32
@@ -106,7 +114,7 @@ func (h *HashRing) GetShard(key string) (string, error) {
 	defer h.mu.RUnlock()
 
 	if len(h.SortedHashes) == 0 {
-		return "", fmt.Errorf("ring is empty")
+		return "", fmt.Errorf("ring is empty, possible config error")
 	}
 
 	hash := murmur3.Sum32([]byte(key))
@@ -149,9 +157,15 @@ func (h *HashRing) Clone() *HashRing {
 	}
 }
 
-// RingManager manages a HashRing instance with concurrency control and configuration path.
-// It provides methods to add and remove shards safely, updating both the ring and config file.
-// It also maintains an atomic pointer to the current active ring.
+// RingManager provides a concurrency-safe interface to manage the consistent hashing ring.
+// Users should interact exclusively with this struct to add/remove shards and execute queries.
+// It maintains an atomic pointer to the current active HashRing and manages configuration persistence.
+//
+// Fields:
+// - Ring: Current active HashRing instance.
+// - ConfigPath: Path to the JSON configuration file.
+// - Rring: Atomic pointer to the active HashRing for lock-free reads.
+// - mu: Mutex to serialize modifications.
 type RingManager struct {
 	mu         sync.Mutex
 	Ring       *HashRing
@@ -159,7 +173,7 @@ type RingManager struct {
 	Rring      atomic.Pointer[HashRing]
 }
 
-// InitRingManager initializes a RingManager with a given config path.
+// InitRingManager initializes a RingManager with the given config path.
 // It loads the initial hash ring and stores it atomically.
 func InitRingManager(configpath string) (*RingManager, error) {
 	hashRing, err := InitHashRing(configpath)
@@ -260,6 +274,7 @@ func (rm *RingManager) RemoveShard(name string) error {
 }
 
 // Query executes a query that returns multiple rows on the appropriate shard based on the key.
+// It routes the query to the shard determined by consistent hashing.
 func (rm *RingManager) Query(q types.Query) (pgx.Rows, error) {
 	ring := rm.Rring.Load()
 	if ring == nil {
@@ -281,6 +296,7 @@ func (rm *RingManager) Query(q types.Query) (pgx.Rows, error) {
 }
 
 // Exec executes a query that does not return rows on the appropriate shard based on the key.
+// It routes the query to the shard determined by consistent hashing.
 func (rm *RingManager) Exec(q types.Query) (pgconn.CommandTag, error) {
 	ring := rm.Rring.Load()
 	if ring == nil {
@@ -302,6 +318,7 @@ func (rm *RingManager) Exec(q types.Query) (pgconn.CommandTag, error) {
 }
 
 // QueryRow executes a query that returns a single row on the appropriate shard based on the key.
+// It routes the query to the shard determined by consistent hashing.
 func (rm *RingManager) QueryRow(q types.Query) (pgx.Row, error) {
 	ring := rm.Rring.Load()
 	if ring == nil {
